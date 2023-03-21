@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+	 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="Board">
+	<select id="Board_getTotalCnt" parameterType="BoardDto"
+	        resultType="Integer">
+	select count(*)
+	from board         
+	</select>
+	
+	
+	<select id="Board_getList"  parameterType="BoardDto"
+		resultType="BoardDto" >
+	select 
+	    A.seq
+	    ,A.title
+	    ,A.userid
+	    ,nvl(filename1, '') filename1
+	    ,nvl(filename2, '') filename2
+	    ,nvl(filename3, '') filename3
+	    ,to_char(regdate, 'yyyy-mm-dd') regdate 
+	    ,to_char(moddate, 'yyyy-mm-dd') moddate 
+	    ,rnum as num
+	    ,nvl(hit, 0) hit 
+	from 
+	(
+	select 
+	    A.seq
+	    ,A.title
+	    ,A.userid
+	    ,A.contents
+	    ,A.filename1
+	    ,A.filename2
+	    ,A.filename3
+	    ,A.regdate
+	    ,A.moddate 
+	    ,A.hit
+	    ,row_number() over(order by group_id desc, g_level asc) rnum
+	    ,ceil(row_number() over(order by group_id desc, g_level asc)/#{pgSize})-1 pg
+	from board A
+	)A where pg=#{pg}	
+	</select>
+	
+	<insert id="Board_insert" parameterType="BoardDto">
+		<selectKey resultType="String" keyProperty="seq" order="BEFORE">
+			select nvl(max(seq), 0)+1  as seq  
+			from board 
+		</selectKey>
+		insert into board
+		(
+			seq
+			,title
+			,contents
+			,userid
+			,hit
+			,regdate
+			,filename1
+			,filename2
+			,filename3	
+			,delyn
+			,group_id
+			,depth
+			,g_level
+		)
+		values
+		(
+			#{seq}       --  # 데이터가 숫자면 문자면 알아서 ''를 붙여준다 
+			,#{title}    --  $를 들어간 값들이 보이긴 하는데 우리가 ''를 직접붙여야 한다
+			,#{contents}  
+			,#{userid}
+			,0            -- 조회수   
+			,sysdate
+			,#{filename1}
+			,#{filename2}
+			,#{filename3}	
+			,'N'
+			,#{seq}      -- 자신이 부모글이라서 그룹아이디와  seq가 같아야 한다
+			,0           -- 부모글이라         
+			,1           -- 부모글이라 
+		)
+	</insert>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+

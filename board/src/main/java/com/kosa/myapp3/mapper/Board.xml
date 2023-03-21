@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+	 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="Board">
+	<select id="Board_getTotalCnt" parameterType="BoardDto"
+	        resultType="Integer">
+	select count(*)
+	from board         
+	</select>
+	
+	
+	<select id="Board_getList"  parameterType="BoardDto"
+		resultType="BoardDto" >
+	select 
+	    A.seq
+	    ,A.title
+	    ,A.userid
+	    ,nvl(filename1, '') filename1
+	    ,nvl(filename2, '') filename2
+	    ,nvl(filename3, '') filename3
+	    ,to_char(regdate, 'yyyy-mm-dd') regdate 
+	    ,to_char(moddate, 'yyyy-mm-dd') moddate 
+	    ,rnum as num
+	    ,nvl(hit, 0) hit 
+	    ,A.group_id
+	    ,A.depth
+	    ,A.g_level
+	    ,A.delyn2
+	from 
+	(
+		select 
+		    A.seq
+		    ,A.title
+		    ,A.userid
+		    ,A.contents
+		    ,A.filename1
+		    ,A.filename2
+		    ,A.filename3
+		    ,A.regdate
+		    ,A.moddate 
+		    ,A.hit
+		    ,A.group_id
+		    ,A.depth
+		    ,A.g_level
+		    ,A.delyn2
+		    ,row_number() over(order by group_id desc, g_level asc) rnum
+		    ,ceil(row_number() over(order by group_id desc, g_level asc)/#{pgSize})-1 pg
+		from board A
+		where delyn='N'
+	)A where pg=#{pg}	
+	</select>
+	
+	<insert id="Board_insert" parameterType="BoardDto">
+		<selectKey resultType="String" keyProperty="seq" order="BEFORE">
+			select nvl(max(seq), 0)+1  as seq  
+			from board 
+		</selectKey>
+		insert into board
+		(
+			seq
+			,title
+			,contents
+			,userid
+			,hit
+			,regdate
+			,filename1
+			,filename2
+			,filename3	
+			,delyn
+			,group_id
+			,depth
+			,g_level
+		)
+		values
+		(
+			#{seq}       --  # 데이터가 숫자면 문자면 알아서 ''를 붙여준다 
+			,#{title}    --  $를 들어간 값들이 보이긴 하는데 우리가 ''를 직접붙여야 한다
+			,#{contents}  
+			,#{userid}
+			,0            -- 조회수   
+			,sysdate
+			,#{filename1}
+			,#{filename2}
+			,#{filename3}	
+			,'N'
+			,#{seq}      -- 자신이 부모글이라서 그룹아이디와  seq가 같아야 한다
+			,0           -- 부모글이라         
+			,1           -- 부모글이라 
+		)
+	</insert>
+	
+	<update id="Board_updateHit" parameterType="BoardDto">
+	update board set hit=hit+1 where seq=#{seq}
+	</update>
+	
+	<select id="Board_getView" parameterType="BoardDto"
+		resultType="BoardDto">
+		select 
+		    A.seq
+		    ,A.title
+		    ,A.userid
+		    ,A.contents
+		    ,nvl(A.filename1, '') filename1
+		    ,nvl(A.filename2, '') filename2
+		    ,nvl(A.filename3, '') filename3
+		    ,A.regdate
+		    ,A.moddate 
+		    ,A.hit
+		    ,A.group_id
+		    ,A.depth
+		    ,A.g_level
+	   from board A
+	   where seq = #{seq}
+	</select>
+	
+	
+	<insert id="Board_reply" parameterType="BoardDto">
+		<selectKey resultType="String" keyProperty="seq" order="BEFORE">
+			select nvl(max(seq), 0)+1  as seq  
+			from board 
+		</selectKey>
+		insert into board
+		(
+			seq
+			,title
+			,contents
+			,userid
+			,hit
+			,regdate
+			,filename1
+			,filename2
+			,filename3	
+			,delyn
+			,group_id
+			,depth
+			,g_level
+		)
+		values
+		(
+			#{seq}       --  # 데이터가 숫자면 문자면 알아서 ''를 붙여준다 
+			,#{title}    --  $를 들어간 값들이 보이긴 하는데 우리가 ''를 직접붙여야 한다
+			,#{contents}  
+			,#{userid}
+			,0            -- 조회수   
+			,sysdate
+			,#{filename1}
+			,#{filename2}
+			,#{filename3}	
+			,'N'
+			,#{group_id}  -- 부모글의 그룹아이디 
+			,#{depth}     -- 부모글 + 1       
+			,#{g_level}   -- 부모글 + 1 
+		)
+	</insert>
+	
+	<!--  자신의 부모글보다 레벨이 높은 글들의 레벨을 하나 더 높이고 
+	내가 그자리에 들어간다  BoardDto 부모글 -->
+	<update id="Board_reply_level_update" parameterType="BoardDto">
+		update board set g_level = g_level + 1
+		where group_id=#{group_id} and g_level>#{g_level} 
+	</update>
+	
+	<update id="Board_update" parameterType="BoardDto">
+		update board
+			set title = #{title}
+			    ,contents =#{contents}
+			    ,filename1 = #{filename1}
+			    ,filename2 = #{filename2}
+			    ,filename3 = #{filename3}
+			    ,moddate = sysdate
+			where seq=#{seq}
+	</update>
+	
+	<!--  자식유무 알아올 쿼리 -->
+	<select id="Board_isChild" parameterType="BoardDto"
+		resultType="Integer">
+	    select count(*) 
+	    from board
+		where group_id=#{group_id} 
+		      and depth=#{depth}+1
+		      and g_level=#{g_level}+1
+	</select>
+	<!-- 그룹이 같아야 하고 depth+1 그리고 g_level+1 한 것이 반드시 있음 
+		카운트가 0이면 자식이 없음
+	-->
+	
+	<!-- 전체삭제 -->
+	<update id="Board_delete1" parameterType="BoardDto">
+		update board set delyn='Y' where seq=#{seq}
+	</update>
+	
+	<!-- 자식글이 있어서 삭제를 못할때 -->
+	<update id="Board_delete2" parameterType="BoardDto">
+		update board set delyn2='Y' where seq=#{seq}
+	</update>
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+

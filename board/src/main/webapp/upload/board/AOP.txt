@@ -1,0 +1,389 @@
+JUnitTest 사용하기 
+
+프로젝트명 : aoptest 
+<!-- Servlet : -->  
+		<!-- <dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.5</version>
+			<scope>provided</scope>
+		</dependency> -->
+		
+<!--서블릿 버전 업그레이드 -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+        <!--@Resource -->
+		<dependency>
+		    <groupId>javax.annotation</groupId>
+		    <artifactId>javax.annotation-api</artifactId>
+		    <version>1.3.2</version>
+		</dependency>
+        
+		<!-- Spring Test -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<version>${org.springframework-version}</version>
+		</dependency>
+		
+		<!--  AOP  -->
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
+			<version>1.6.11</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjrt</artifactId>
+			<version>1.6.8</version>
+		</dependency>  
+		
+		<dependency>
+			<groupId>cglib</groupId>
+			<artifactId>cglib</artifactId>
+			<version>2.2.2</version>
+		</dependency> 
+		
+
+src/test/java 
+       com.kosa.myhome  AdviceTest.java  파일 추가 
+       시스템이 JUnit4 jar  추가하라고 함  추가 하기 
+
+       JUnit4
+           파일 2개 추가된다.
+
+
+package com.kosa.myhome;
+
+import javax.annotation.Resource;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration
+(locations = {"file:src/main/webapp/WEB-INF/spring/root-context.xml",
+		"file:src/main/webapp/WEB-INF/spring/appServlet/servlet-context.xml"})
+public class AdviceTest {
+
+	
+    @Test
+    public void test() throws Exception {
+          
+        try {
+           
+        	 System.out.println("Junit test");
+ 
+           
+        } catch (Exception e) {
+           e.printStackTrace();
+        }
+    }
+}
+
+run as - junit4로 실행한다 
+
+
+Advice클래스 추가
+package com.kosa.myhome;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+//https://www.egovframe.go.kr/wiki/doku.php?id=egovframework:rte2:fdl:aop:xmlschema
+//https://shortstories.gitbook.io/studybook/spring_ad00_b828_c815_b9ac/aop/baa8-b4e0-c6f9-c694-ccad-c5d0-b300-d574-c11c-b85c-adf8-b85c-b0a8-ae30-ae30
+
+public class AdviceUsingXML {
+
+	public void beforeTargetMethod(JoinPoint thisJointPoint) {
+		
+		System.out.println("before");
+		Class thisClass = thisJointPoint.getTarget().getClass();
+		String className = thisClass.getSimpleName();
+		String methodName=thisJointPoint.getSignature().getName();
+		Logger logger = LoggerFactory.getLogger(thisClass);
+		logger.debug(thisClass + " " + className + "  " + methodName);
+		
+	}
+	
+	public void afterReturningTargetMethod(JoinPoint thisJoinPoint,  Object retVal) {
+        System.out.println("afterReturningTargetMethod executed. return value is [" + retVal + "]");
+    }
+	
+	public void afterThrowingTargetMethod(JoinPoint thisJoinPoint,  Exception exception) throws Exception {
+        System.out.println("afterThrowingTargetMethod executed.");        
+    }
+	
+	public void afterTargetMethod(JoinPoint thisJoinPoint,  Exception exception) throws Exception {
+        System.out.println("afterThrowingTargetMethod executed.");        
+    }
+	
+	public Object aroundTargetMethod(ProceedingJoinPoint thisJoinPoint)throws Throwable {
+        System.out.println("AdviceUsingXML.aroundTargetMethod start.");
+        long time1 = System.currentTimeMillis();
+        Object retVal = thisJoinPoint.proceed();
+ 
+        System.out.println("ProceedingJoinPoint executed. return value is ["  + retVal + "]");
+ 
+        retVal = retVal + "(modified)";
+        System.out.println("return value modified to [" + retVal + "]");
+ 
+        long time2 = System.currentTimeMillis();
+        System.out.println("AdviceUsingXML.aroundTargetMethod end. Time("  + (time2 - time1) + ")");
+        return retVal;
+    }
+	
+}
+
+
+AOPSample.java
+package com.kosa.myhome;
+
+package com.kosa.myhome;
+
+import org.springframework.stereotype.Service;
+
+//@Service("aopSample")
+public class AOPSample {
+
+	public void displayName()
+	{
+		System.out.println("홍길동");
+	}
+	
+	public void displayNumber()
+	{
+		int sum=0;
+		for(int i=1; i<=100000; i++)
+		{
+			sum+=i;
+		}
+		System.out.println(sum);
+	}
+	
+	public Object displayNumber(int limit)
+	{
+		int sum=0;
+		for(int i=1; i<=limit; i++)
+		{
+			sum+=i;
+		}
+		System.out.println(sum);
+		
+		return sum;
+	}
+	
+	public Object displayNumber(AopDto dto)
+	{
+		int sum=0;
+		for(int i=1; i<=dto.getLimit(); i++)
+		{
+			sum+=i;
+		}
+		System.out.println(sum);
+		
+		return sum;
+	}
+}
+
+
+
+spring-conterxt.xml 파일에 추가하기 
+
+     <beans:bean id="adviceUsingXML" class="com.kosa.myhome.AdviceUsingXML" />
+	 <beans:bean id="aopSample" class="com.kosa.myhome.AOPSample" />
+	 
+	
+	 <aop:config proxy-target-class="true">
+		<aop:pointcut id="targetMethod" expression="execution(public * com.kosa.myhome.*Sample.*(..))"/>
+		<aop:aspect ref="adviceUsingXML">
+		<aop:around pointcut-ref="targetMethod" method="aroundTargetMethod"/>
+		<aop:before pointcut-ref="targetMethod" method="beforeTargetMethod"/>
+		</aop:aspect>
+	</aop:config>
+
+
+
+    테스트파일 작성 예시 
+    package com.hsweb.springweb;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+// spring-test 사용
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations = "/root-context.xml")
+public class Test {
+
+	@Autowired
+	private ApplicationContext ctx;
+	
+	@Before
+	public void beforeClass() {
+		System.out.println("-----테스트 시작-----");
+	}
+	
+	@After
+	public void afterClass() {
+		System.out.println("-----테스트 종료-----");
+	}
+
+	@org.junit.Test
+	public void dbTest() {
+
+		// 컨테이너에서 getBean()
+		SqlSessionTemplate session 
+		= ctx.getBean("sqlSessoinTemplate",SqlSessionTemplate.class);
+		System.out.println(session);
+	}
+}
+
+
+
+2. annotation  사용하기 
+
+spring-context.xml 에 추가하기 
+aop namespace  필요
+<aop:aspectj-autoproxy />
+
+
+
+package com.kosa.myhome;
+
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+@Component // 1
+@Aspect // 2
+public class AdviceUsingAnnotation {
+	
+	/*@Before
+	public void beforeTargetMethod(JoinPoint thisJointPoint) {
+		
+		System.out.println("before");
+		Class thisClass = thisJointPoint.getTarget().getClass();
+		String className = thisClass.getSimpleName();
+		String methodName=thisJointPoint.getSignature().getName();
+		Logger logger = LoggerFactory.getLogger(thisClass);
+		logger.debug(thisClass + " " + className + "  " + methodName);
+		
+	}*/
+
+	
+	//PointCut의 속성에 핵심코드의 어느 부분까지 공통 기능을 사용하겟다고 명시
+    @Pointcut("execution(public * com.kosa.myhome.*Service.*(..))")
+    private void publicTarget() {
+        
+    }
+    
+    //around가 적용될 포인트 컷을 명시 : publicTarget()
+    @Around("publicTarget()")
+	public Object aroundTargetMethod(ProceedingJoinPoint thisJoinPoint)throws Throwable {
+        System.out.println("aroundTargetMethod start.");
+        long time1 = System.currentTimeMillis();
+        Object retVal = thisJoinPoint.proceed();
+ 
+        System.out.println("ProceedingJoinPoint executed. return value is ["  + retVal + "]");
+ 
+        retVal = retVal + "(modified)";
+        System.out.println("return value modified to [" + retVal + "]");
+ 
+        long time2 = System.currentTimeMillis();
+        System.out.println("aroundTargetMethod end. Time("  + (time2 - time1) + ")");
+        return retVal;
+    }
+}
+
+
+
+
+package com.kosa.myhome;
+
+public interface SampleService {
+	public void displayName();
+	public void displayNumber();
+	public Object displayNumber(int limit);
+	public Object displayNumber(AopDto dto);
+}
+
+
+
+
+package com.kosa.myhome;
+
+import org.springframework.stereotype.Service;
+
+@Service("sampeService")
+public class SampleServiceImpl implements SampleService {
+
+	public void displayName()
+	{
+		System.out.println("홍길동");
+	}
+	
+	public void displayNumber()
+	{
+		int sum=0;
+		for(int i=1; i<=100000; i++)
+		{
+			sum+=i;
+		}
+		System.out.println(sum);
+	}
+	
+	public Object displayNumber(int limit)
+	{
+		int sum=0;
+		for(int i=1; i<=limit; i++)
+		{
+			sum+=i;
+		}
+		System.out.println(sum);
+		
+		return sum;
+	}
+	
+	public Object displayNumber(AopDto dto)
+	{
+		int sum=0;
+		for(int i=1; i<=dto.getLimit(); i++)
+		{
+			sum+=i;
+		}
+		System.out.println(sum);
+		
+		return sum;
+	}
+
+}
