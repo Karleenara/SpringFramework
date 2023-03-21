@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.kosa.myapp3.mapper.MemberMapper">
+	<insert id="Member_insert" parameterType="MemberDto">
+		<selectKey resultType="String" keyProperty="member_id" order="BEFORE">
+			select nvl(max(member_id),0) + 1 as member_id
+			from tb_member
+		</selectKey>
+			insert into tb_member
+			(
+			member_id
+			,user_id
+			,password
+			,user_name
+			,email
+			,phone
+			,nickname
+			,zipcode
+			,address1
+			,address2
+			,regdate
+			) values (
+			#{member_id}
+			,#{user_id}
+			,#{password}
+			,#{user_name}
+			,#{email}
+			,#{phone}
+			,#{nickname}
+			,#{zipcode}
+			,#{address1}
+			,#{address2}
+			,sysdate
+			)
+	</insert>
+</mapper>

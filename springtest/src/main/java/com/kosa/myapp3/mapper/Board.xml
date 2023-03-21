@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+	 PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	 "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="Board">
+	<select id="Board_getTotalCnt" parameterType="BoardDto"
+		resultType="Integer">
+		select count(*)
+		from board
+		where delyn='N'
+	</select>
+
+	<select id="Board_getList" parameterType="BoardDto"
+		resultType="BoardDto">
+		select
+		A.seq
+		,A.title
+		,A.userid
+		,nvl(filename1, '') filename1
+		,nvl(filename2, '') filename2
+		,nvl(filename3, '') filename3
+		,to_char(regdate, 'yyyy-mm-dd') regdate
+		,to_char(moddate, 'yyyy-mm-dd')
+		moddate
+		, rnum as num
+		, nvl(hit,0) hit
+		,A.group_id
+		,A.depth
+		,A.g_level
+		,A.delyn
+		,A.delyn2
+		from
+		(
+		select
+		A.seq
+		,A.userid
+		,A.title
+		,A.contents
+		,A.filename1
+		,A.filename2
+		,A.filename3
+		,A.regdate
+		,A.moddate
+		,A.hit
+		,A.group_id
+		,A.depth
+		,A.g_level
+		,A.delyn
+		,A.delyn2
+		,row_number() over (order by group_id desc, g_level asc) as rnum <!-- over 
+			: row_num() 사용할때 order by 조건 -->
+		,ceil(row_number () over (order by group_id desc, g_level asc)/#{pgSize})-1
+		as pg <!-- ceil: 올림 -->
+		from board A
+		where delyn='N'
+		)A where pg=#{pg}
+	</select>
+
+	<insert id="Board_insert" parameterType="BoardDto">
+		<selectKey resultType="String" keyProperty="seq"
+			order="BEFORE">
+			select nvl(max(seq),0) + 1 as seq
+			from board
+		</selectKey>
+		insert into board
+		(seq, userid, title, contents, filename1, filename2,
+		filename3, regdate , hit, delyn, group_id, depth, g_level)
+		values(#{seq}, #{userid}, #{title}, #{contents}, #{filename1},
+		#{filename2}, #{filename3}, sysdate, 0, 'N', #{seq}, 0, 1) <!-- group_id: 
+			자신이 부모글이라서 그룹아이디와 seq 같아야함 -->
+	</insert>
+
+	<select id="Board_getView" parameterType="BoardDto"
+		resultType="BoardDto">
+		select 
+			seq
+			,nvl(title, '') title
+			,nvl(contents, '') contents
+			,userid
+			,hit
+			,regdate
+			,nvl(filename1, '') filename1
+			,nvl(filename2, '') filename2
+			,nvl(filename3, '') filename3
+			,delyn
+			,group_id
+			,depth
+			,g_level
+		from board
+		where seq=#{seq}
+	</select>
+
+	<update id="Board_setHit" parameterType="BoardDto">
+		update board set
+		hit=hit+1
+		where seq=#{seq}
+	</update>
+
+	<insert id="Board_reply" parameterType="BoardDto">
+		<selectKey resultType="String" keyProperty="seq"
+			order="BEFORE">
+			select nvl(max(seq), 0)+1 as seq
+			from board
+		</selectKey>
+		insert into board
+		(
+		seq
+		,title
+		,contents
+		,userid
+		,hit
+		,regdate
+		,filename1
+		,filename2
+		,filename3
+		,delyn
+		,group_id
+		,depth
+		,g_level
+		)
+		values
+		(
+		#{seq} 
+		,#{title}
+		,#{contents}
+		,#{userid}
+		,0 -- 조회수
+		,sysdate
+		,#{filename1}
+		,#{filename2}
+		,#{filename3}
+		,'N'
+		,#{group_id}
+		,#{depth} 
+		,#{g_level} 
+		)
+	</insert>
+
+	<update id="Board_reply_level_update" parameterType="BoardDto">
+		update board
+		set g_level = g_level + 1
+		where group_id=#{group_id} and
+		g_level>#{g_level}
+	</update>
+	
+	<update id = "Board_mody" parameterType="BoardDto">
+		update board
+		set title = #{title}, contents = #{contents}, filename1=#{filename1}, filename2 = #{filename2}, filename3=#{filename3}, moddate = sysdate
+		where seq = #{seq}
+	</update>
+	
+	<!-- 자식 유무 알아올 쿼리 -->
+	<!-- 그룹이 같아야 하고 depth+1 그리고 g_level+1 한 것이 반드시 있음 카운트가 0 이면 자식이 없음 -->
+	<select id="Board_isChild" parameterType="BoardDto" resultType="Integer">
+		select count(*)
+		from board
+		where group_id= #{group_id}
+			and depth=#{depth} + 1
+			and g_level=#{g_level} + 1
+	</select>
+	
+	<!-- 전체삭제 -->
+	<update id="Board_delete1" parameterType="BoardDto">
+		update board set delyn='Y'
+		where seq=#{seq}
+	</update>
+	
+	<!-- 자식글이 있어서 삭제 못할 때 -->
+	<update id="Board_delete2" parameterType="BoardDto">
+		update board set delyn2='Y'
+		where seq=#{seq}
+	</update>
+	
+</mapper>
